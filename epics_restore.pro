@@ -10,7 +10,7 @@ while (not eof(save_lun)) do begin
     if (strpos(line, "#") eq 0) then goto, skip
     ; pvname is the first string on the input line
     pos = strpos(line, ' ')
-    if (pos le 0) then message, 'No blank in input line: '+line
+    if (pos le 0) then goto, skip  ; This line has PV but no value
     pvname = strmid(line, 0, pos)
     value = strmid(line, pos+1, 1000)
     status = caput(pvname, value)
