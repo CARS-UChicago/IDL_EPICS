@@ -189,6 +189,8 @@
 ;       25-OCT-2000     MLR Increased scaler channels from 16 to 32.
 ;       19-MAR-2001     TJG Modified for ChemMatCARS decreased scalers
 ;			    and saved all calc records in scan rec.	
+;       25-JUN-2002     TJG Added the motor fields ERES, RDBD, RTRY,UEIP	
+;       27-JUN-2002     TJG Added the pinhole and PSD fields	
 ;-
 
 pro create_autosavefiles_chemmat,   prefix          = prefix,          $
@@ -214,9 +216,11 @@ pro create_autosavefiles_chemmat,   prefix          = prefix,          $
                             mcas            = mcas,            $
                             energy          = energy,          $
                             smart           = smart,           $
-                            simple_mcas     = simple_mcas,	   $
-							user_transform  = user_transform,  $
-							user_calc		= user_calc
+                            psd		    = psd,	       $
+                            pinhole	    = pinhole,	       $
+                            simple_mcas     = simple_mcas,     $
+			    user_transform  = user_transform,  $
+			    user_calc	    = user_calc
 
 if n_elements(settings_file) eq 0 then settings_file = 'auto_settings.req'
 if n_elements(positions_file) eq 0 then positions_file = 'auto_positions.req'
@@ -268,6 +272,10 @@ motor_settings  = ['.DHLM', $
                    '.TWV',  $
                    '.DISA', $
                    '.DISP', $
+                   '.ERES', $
+                   '.RDBD', $
+                   '.RTRY', $
+                   '.UEIP', $
                    ':scanParms.SP', $
                    ':scanParms.EP', $
                    ':scanParms.NP', $
@@ -744,7 +752,7 @@ if n_elements(user_calc) gt 0 then begin
 endif
 
 
-if n_elements(energy) gt 0 then begin
+if n_elements(energy) gt 0 then begin
  	if (energy eq 'kohzu') then begin
     		energy_settings = ['KohzuModeBO.VAL',	$
     			'BraggTypeMO',			$
@@ -757,7 +765,18 @@ endif
         		printf, lun, prefix + energy_settings(j)
     		endfor
 	endif
-endif
+endif
+
+if n_elements(psd) gt 0 then begin
+    printf, lun, prefix + 'PSDcalcTRAN.G'
+    printf, lun, prefix + 'PSDcalcTRAN.E'
+    printf, lun, prefix + 'PSDcalcTRAN.H'
+    printf, lun, prefix + 'PSDcalcTRAN.F'
+endif
+
+if n_elements(pinhole) gt 0 then begin
+    printf, lun, prefix + 'PinholeMBBO.VAL'
+endif
 
 free_lun, lun
 
