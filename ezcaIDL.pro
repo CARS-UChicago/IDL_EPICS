@@ -137,7 +137,6 @@ function ezcaStringToByte, str, num
 ; OUTPUTS:
 ;       This function returns a 2-D byte [MAX_STRING_SIZE, n_elements(Str)] which
 ;       is the input string array converted to fixed-length byte arrays.
-;               is specified
 ;
 ;       Num: Returns n_elements(Str) as a short integer
 ;
@@ -153,6 +152,9 @@ function ezcaStringToByte, str, num
 ;
 ; MODIFICATION HISTORY:
 ;       Written by:   Mark Rivers, 26-Sep-2001
+;       MLR 28-Nov-2001  Previous version replaced null string ("") with a single
+;                        blank character.  This was bad, unused scan record PVs were
+;                        coming up unable to connect.  Removed this replacement.
 ;-
 
     common ezca_common
@@ -160,8 +162,6 @@ function ezcaStringToByte, str, num
     num = fix(n_elements(str))
     byt = bytarr(MAX_STRING_SIZE, num)
     for i=0,num-1 do begin
-        ; check for null string first
-        if strlen(str[i]) lt 1 then str[i] = ' '
         byt[0, i] = byte(str[i])
         ; Make sure string is null terminated
         byt[MAX_STRING_SIZE-1, i] = 0
@@ -2354,7 +2354,7 @@ PRO caPutArray,help=help
 END
 
 
-FUNCTION caPutArray,names,pdata,string=string,event=event
+FUNCTION caPutArray,names,pdata,event=event
 ;+
 ; NAME:
 ;       caPutArray
@@ -2372,7 +2372,8 @@ FUNCTION caPutArray,names,pdata,string=string,event=event
 ; INPUTS:
 ;       pvname: The variable specifies a list of process variables for
 ;               which the input array of data is to be written to IOC.
-;       pdata:  Input data array. The data array must be consistant with
+;       pdata[m,N]:  Input data array, define m values for each N PV names. 
+;               The data array defined must be consistant within
 ;               the number of PV names defined in the pvname.
 ;
 ; KEYWORD PARAMETERS:
@@ -2419,6 +2420,8 @@ FUNCTION caPutArray,names,pdata,string=string,event=event
 ;
 ; MODIFICATION HISTORY:
 ;       Written by:     Ben-chin Cha      Dec, 1995
+;       11-29-2001 bkc  If pdata is string type, convert back to string after
+;                       calling EzcaPutArray
 ;-
     common ezca_common
 
@@ -2485,6 +2488,9 @@ FUNCTION caPutArray,names,pdata,string=string,event=event
     else $
         ln = call_ezca('EzcaPutArrayValues', ca_type, long(num), no, $
                 pdata, nms)
+
+    if wave_type eq 7 then pdata=string(pd)
+
     return,ln
 END
 
