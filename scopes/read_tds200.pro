@@ -2,11 +2,15 @@ pro read_tds200, record, data, start=start, stop=stop, chan=chan
 
 ; This procedure reads waveforms from the Tektronix TDS200 series scopes
 ; Mark Rivers
-; Modified March 7, 2001 to correctly put record in Write and Write/Read modes.
+; Modifications:
+;     March 7,  2001 Correctly put record in Write and Write/Read modes.
+;     Dec. 7,   2001 Set timeout to 2 seconds before read.
+;     March 30, 2004 Change IFMT from Binary to Hybrid, other fixes.
 
 if (n_elements(start) eq 0) then start=1
 if (n_elements(stop) eq 0) then stop=2500
-if (n_elements(chan) eq 0) then chan='CH1'
+if (n_elements(chan) eq 0) then chan=1
+chan = 'CH'+strtrim(chan,2)
 
 aout = record + '.AOUT'
 binp = record + '.BINP'
@@ -14,6 +18,13 @@ tmod = record + '.TMOD'
 ifmt = record + '.IFMT'
 binp = record + '.BINP'
 nord = record + '.NORD'
+tmot = record + '.TMOT'
+oeos = record + '.OEOS'
+ieos = record + '.IEOS'
+
+; Set the terminators to newline (assumes scope is set up this way)
+t = caput(oeos, '\n', /wait)
+t = caput(ieos, '\n', /wait)
 
 ; Set the transfer mode to write
 t = caput(tmod, 'Write', /wait)
@@ -33,11 +44,15 @@ t = caput(aout, command, /wait)
 command = 'DATA:SOURCE '+ strtrim(chan,2)
 t = caput(aout, command, /wait)
 
-; Set the input mode to binary
-t = caput(ifmt, 'Binary', /wait)
+; Set the input mode to hybrid. Large buffer but line-feed terminator
+t = caput(ifmt, 'Hybrid', /wait)
 
 ; Set the transfer mode to write/read
 t = caput(tmod, 'Write/Read', /wait)
+
+; Empirically the timeout needs to be about 5 seconds for 
+; 1024 channels with RS-232
+t = caput(tmot, 2.0)
 
 ; Read the scope
 t = caput(aout, 'Curve?', /wait)
@@ -45,13 +60,17 @@ t = caput(aout, 'Curve?', /wait)
 ; Get the data
 t = caget(binp, data)
 
-; Check the number of bytes read.  It should be stop-start+8
+; Check the number of bytes read.  See if it's what's expected
+n_data = stop-start+1
+n_header = 2 + strlen(strtrim(n_data, 2))
+n_checksum = 1
+n_expected = n_header + n_data + n_checksum
 t = caget(nord, n)
-if (n ne stop-start+8) then message, 'Scope returned bad data'
+if (n ne n_expected) then print, 'Scope returned:', n, ' bytes, expected: ', n_expected
 
-; The first 6 bytes are header, the last byte is checksum.  Data are offset by
+; The first n_header bytes are header, the last byte is checksum.  Data are offset by
 ; 127, convert to long
-data = data[6:n-2] - 127L
+data = data[n_header:n-2] - 127L
 
 return
 end
