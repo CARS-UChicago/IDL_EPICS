@@ -98,7 +98,7 @@
 ;       MPC_TSPS:
 ;           A string array containing the names of MPC TSP pumps
 ;       PIEZOS:
-;           A string array containing the names of Piezos 
+;           A string array containing the names of Piezos
 ;       SIMPLE_MCAS:
 ;           A string array containing the names of MCA records loaded with the
 ;           simple_mca.db database which has fewer fields, and is used for
@@ -150,7 +150,7 @@
 ;       mcas            = ['aim_adc1', 'aim_mcs1', 'mip330_1', 'mip330_2']
 ;       dmms            = ['DMM1','DMM3','DMM4']
 ;       feedback        = ['PID1','PID2']
-;   
+;
 ;       create_autosavefiles, prefix          = prefix,          $
 ;                      nmotors         = 64,              $
 ;                      npseudomotors   = 11,              $
@@ -205,6 +205,13 @@
 ;       21-AUG-2001     MLR Added tweak values for DACS and offset for pseudomotors
 ;       24-AUG-2001     MLR Increased number of ROIs in MCA records from 10 to 32.
 ;       1-OCT-2001      MLR Changed scanParams.template to use new syntax
+;       13-JAN-2002     MLR Changed dxp_settings for new record fields
+;       12-MAR-2002     MLR Changed dxp_settings for new record fields
+;       28-AUG-2002     MN  Added user transform record (for 13IDA feedback calcs)
+;       12-SEP-2002     MLR Added Fluke_8842A
+;       12-SEP-2002     MLR Added PGAIN field for DXPs
+;       12-MAR-2003     MLR Added support for Heidenhein IK320 and hrm (high-resolution monochromator)
+;       26-MAR-2003     MLR Fixed bug with user_transform records, didn't work with more than 1.
 ;-
 
 pro create_autosavefiles,   prefix          = prefix,          $
@@ -228,12 +235,17 @@ pro create_autosavefiles,   prefix          = prefix,          $
                             scanparms_file  = scanparms_file,  $
                             feedback        = feedback,        $
                             mcas            = mcas,            $
+                            user_transform  = user_transform,  $
                             energy          = energy,          $
                             piezos          = piezos,          $
                             smart           = smart,           $
                             mpcs            = mpcs,            $
                             mpc_tsps        = mpc_tsps,        $
                             dxps            = dxps,            $
+                            newport_snl     = newport_snl,     $
+                            fluke_8842As    = fluke_8842As,    $
+                            ik320s          = ik320s,          $
+                            hrms            = hrms,            $
                             simple_mcas     = simple_mcas
 
 if n_elements(settings_file) eq 0 then settings_file = 'auto_settings.req'
@@ -426,6 +438,54 @@ for i=1, 10 do begin
     dmm_settings = [dmm_settings, 'Ch'+numbers[i]+'_raw.DESC']
 endfor
 
+fluke_8842A_settings = '_Init.AOUT'  ;  The initialization string
+fluke_8842A_settings = $
+         [fluke_8842A_settings, '_Read.SCAN',$     ;  The read rate
+                                '_Convert.CALC',$  ;  The calculation
+                                '_Convert.PREC',$  ;  The # digits
+                                '_Convert.DESC',$  ;  The description
+                                '_Convert.EGU', $  ;  Units
+                                '_Calc.CALC',$     ;  The calculation
+                                '_Calc.PREC',$     ;  The # digits
+                                '_Calc.DESC',$     ;  The description
+                                '_Calc.EGU']       ;  Units
+for i=0, 11 do begin
+    fluke_8842A_settings = [fluke_8842A_settings, '_Convert.INP'+letters[i]]
+    fluke_8842A_settings = [fluke_8842A_settings, '_Calc.INP'+letters[i]]
+endfor
+for i=0, 5 do begin
+    fluke_8842A_settings = [fluke_8842A_settings, '_Convert.IN'+letters[i]+letters[i]]
+    fluke_8842A_settings = [fluke_8842A_settings, '_Calc.IN'+letters[i]+letters[i]]
+endfor
+
+; Heidenhein IK320
+ik320_settings = '.B'
+ik320_settings = [ik320_settings, 'direction.VAL', $
+                                  'raw.DESC',      $ 
+                                  'raw.EGU',       $
+                                  'raw.ASLO',      $
+                                  'prec.VAL']
+
+; High resolution monochromator
+hrm_settings = '_A1AO.VAL'
+hrm_settings = [hrm_settings, '_H1AO.VAL', $
+                              '_K1AO.VAL', $
+                              '_L1AO.VAL', $
+                              '_A2AO.VAL', $
+                              '_H2AO.VAL', $
+                              '_K2AO.VAL', $
+                              '_L2AO.VAL', $
+                              '_EAO.VAL',  $
+                              '_Mode2MO.VAL', $
+                              '_phi1OffAO', $
+                              '_phi2OffAO', $
+                              '_ETweakAI', $
+                              '_LambdaTweakAI', $
+                              '_Theta1TweakAI', $
+                              '_Theta2TweakAI', $
+                              '_worldTweakAI']
+
+
 current_preamp_settings = ['bias_put.VAL', $
                            'bias_tweak.VAL', $
                            'bias_on.VAL', $
@@ -586,17 +646,11 @@ simple_mca_settings = [ $
                 '.CHAS', $
                 '.MODE']
 
-dxp_settings = ['.INSL', $
-                '.UPSL', $
-                '.INBL', $
-                '.UPBL', $
-                '.COLL', $
-                '.CRBL', $
-                '.SBBL', $
-                '.HSBL']
+dxp_settings = ['.GAIN', '.EMAX', '.PKTM', '.FIPPI', '.PGAIN']
 for i=1, 9  do dxp_settings = [dxp_settings, '.A'+string(i, format='(i2.2)')+'V']
 for i=1, 10 do dxp_settings = [dxp_settings, '.F'+string(i, format='(i2.2)')+'V']
-for i=1, 8  do dxp_settings = [dxp_settings, '.D'+string(i, format='(i2.2)')+'V']
+for i=1, 10 do dxp_settings = [dxp_settings, '.D'+string(i, format='(i2.2)')+'V']
+for i=1, 6  do dxp_settings = [dxp_settings, '.B'+string(i, format='(i2.2)')+'V']
 
 for i=0, MAX_ROIS-1 do $
     simple_mca_settings = [simple_mca_settings,            $
@@ -676,6 +730,24 @@ endfor
 for i=0, n_elements(dmms)-1 do begin
    for j=0, n_elements(dmm_settings)-1 do begin
       printf, lun, prefix + dmms(i) + dmm_settings(j)
+   endfor
+endfor
+
+for i=0, n_elements(fluke_8842As)-1 do begin
+   for j=0, n_elements(fluke_8842A_settings)-1 do begin
+      printf, lun, prefix + fluke_8842As(i) + fluke_8842A_settings(j)
+   endfor
+endfor
+
+for i=0, n_elements(ik320s)-1 do begin
+   for j=0, n_elements(ik320_settings)-1 do begin
+      printf, lun, prefix + ik320s(i) + ik320_settings(j)
+   endfor
+endfor
+
+for i=0, n_elements(hrms)-1 do begin
+   for j=0, n_elements(hrm_settings)-1 do begin
+      printf, lun, prefix + hrms(i) + hrm_settings(j)
    endfor
 endfor
 
@@ -773,6 +845,30 @@ if (n_elements(energy) ne 0) then begin
         printf, lun, prefix + energy + ':' + energy_settings(j)  + '.VAL'
     endfor
 endif
+
+for i=0, n_elements(user_transform)-1 do begin
+    utran_p = ['CMT','INP','CLC']
+    utran_l = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P']
+    for j=0, n_elements(utran_p)-1 do begin
+        for k=0, n_elements(utran_l)-1 do begin
+            printf, lun, prefix + user_transform[i] + '.' + utran_p[j] + utran_l[k]
+        endfor
+    endfor
+endfor
+
+
+if (n_elements(newport_snl) ne 0) then begin
+    settings = ['lx', 'lz', 'D0x', 'D0y', 'D0z', 'd1', 'd2']
+    for j=0, n_elements(settings)-1 do begin
+        printf, lun, prefix + newport_snl(0) + settings(j)
+    endfor
+
+    for j=1, n_elements(newport_snl)-1 do begin
+        printf, lun, prefix + newport_snl(j) + ':Readback'
+    endfor
+
+endif
+
 
 free_lun, lun
 
