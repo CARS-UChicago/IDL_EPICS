@@ -204,6 +204,7 @@
 ;       06-JUN-2001     MLR Added DXPS for XIA DXP-4C modules
 ;       21-AUG-2001     MLR Added tweak values for DACS and offset for pseudomotors
 ;       24-AUG-2001     MLR Increased number of ROIs in MCA records from 10 to 32.
+;       1-OCT-2001      MLR Changed scanParams.template to use new syntax
 ;-
 
 pro create_autosavefiles,   prefix          = prefix,          $
@@ -777,7 +778,7 @@ free_lun, lun
 
 ; Create the scanParams.template file
 openw, lun, /get, scanparms_file
-printf, lun, 'file share/stdApp/Db/scanParms.db'
+printf, lun, 'file stdApp/Db/scanParms.db, std'
 printf, lun, '{'
 for i=0, n_elements(motors)-1 do begin
     printf, lun, '{P=' + prefix + ',SCANREC=' + prefix + 'scan1' + ',Q=' $
