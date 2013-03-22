@@ -1,3 +1,11 @@
+;*************************************************************************
+; Copyright (c) 2002 The University of Chicago, as Operator of Argonne
+; National Laboratory.
+; Copyright (c) 2002 The Regents of the University of California, as
+; Operator of Los Alamos National Laboratory.
+; This file is distributed subject to a Software License Agreement found
+; in the file LICENSE that is included with this distribution. 
+;*************************************************************************
 PRO caWidgetDump, pv, widget_id, timer=time
 ; NAME:
 ;	caWidgetDump
@@ -455,3 +463,44 @@ widget_control, base, /realize
 t=caWidgetSetMonitor(pv, widget_ids.monitor)
 xmanager, "caWidgetAdjust", base, group_leader=group
 end
+
+
+PRO add_caPendEvent_event,event
+	widget_control,event.id,get_uvalue=CPEV
+	caPendEvent,time=0.00001
+	widget_control,event.top,timer=CPEV.timer  
+END
+PRO add_caPendEvent,timer=timer
+;+
+; NAME:
+;	add_caPendEvent
+;
+; PURPOSE:
+;	This routine start an IDL widget of sending channel access 
+;       ca_pend_event call with the user specifyable timer interval.
+;       Calling this rountine is required for IDL CA sesstion EPICS 3.14.4
+;	otherwize many CA warning message will be printed on user's IDL
+;	interactive terminal. 
+; 
+; CATEGORY:
+;	Widgets
+;
+; CALLING SEQUENCE:
+;	add_caPendEvent,timer=timer
+;
+; KEYWORD:
+;   timer:  Specify the timer in seconds between each ca_pend_event call
+;	    It defaults to 10 seconds.
+; EXAMPLE:
+;	IDL> add_caPendEvent
+;
+;-
+if keyword_set(timer) eq 0 then timer = 10.
+wbase = widget_base(title='add_caPendEvent',uvalue='PEVENT')
+widget_control,wbase,/realize,timer=timer,/icon  
+CPEV = { base: wbase, timer: timer}
+widget_control,wbase,set_uvalue=CPEV
+xmanager,'add_caPendEvent',wbase,/no_block
+END
+
+
