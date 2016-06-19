@@ -1,4 +1,4 @@
-pro read_tds200, record, data, start=start, stop=stop, chan=chan
+pro read_tds200, record, data, start=start, stop=stop, chan=chan, width=width
 
 ; This procedure reads waveforms from the Tektronix TDS200 series scopes
 ; Mark Rivers
@@ -10,6 +10,7 @@ pro read_tds200, record, data, start=start, stop=stop, chan=chan
 if (n_elements(start) eq 0) then start=1
 if (n_elements(stop) eq 0) then stop=2500
 if (n_elements(chan) eq 0) then chan=1
+if (n_elements(width) eq 0) then width=1
 chan = 'CH'+strtrim(chan,2)
 
 aout = record + '.AOUT'
@@ -36,9 +37,9 @@ t = caput(aout, command, /wait)
 command = 'DATA:STOP ' + strtrim(stop,2)
 t = caput(aout, command, /wait)
 
-;Set DATa:WIDth to 2
-;command = 'DATA:WIDTH 2'
-;t = caput(aout, command, /wait)
+;Set DATa:WIDth
+command = 'DATA:WIDTH ' + strtrim(width,2)
+t = caput(aout, command, /wait)
 
 ;Set channel number
 command = 'DATA:SOURCE '+ strtrim(chan,2)
