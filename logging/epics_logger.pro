@@ -125,6 +125,7 @@ pro new_input_file, file, state
     scroll_base_size = widget_info(state.widgets.scroll_base, /geometry)
     while (not eof(lun)) do begin
         readf, lun, line
+        if (line eq '') then continue
         words = str_sep(line, '|', /trim)
         pv = words[0]
         format = '(' + words[1] + ')'
@@ -133,7 +134,10 @@ pro new_input_file, file, state
         state.description[state.num_pvs] = words[2]
         format = '(' + words[3] + ')'
         state.description_format[state.num_pvs] = format
-        status = caSetMonitor(pv)
+        status = caGetCountAndType(pv, count, type)
+        state.element_count[state.num_pvs] = count
+        state.element_type[state.num_pvs] = type[1]
+        status = caSetMonitor(pv, count)
         state.num_pvs = state.num_pvs + 1
     endwhile
     output_line = string(' ', format='(A20)')
@@ -228,6 +232,8 @@ pro epics_logger_event, event
             output_line = time
             for i=0, state.num_pvs-1 do begin
                 status = caget(state.pvs[i], data)
+                ; If this is a byte array convert to string
+                if ((state.element_type[i] eq 1) and (state.element_count[i] gt 1)) then data = string(data)
                 data = string(data, format=state.data_format[i])
                 output_line = output_line + ' ' + data
             endfor
@@ -245,6 +251,7 @@ pro epics_logger_event, event
                 output_line = 'DATA:|' + time
                 for i=0, state.num_pvs-1 do begin
                     status = caget(state.pvs[i], data)
+                    if ((state.element_type[i] eq 1) and (state.element_count[i] gt 1)) then data = string(data)
                     data = string(data, format=state.data_format[i])
                     output_line = output_line + '|' + strtrim(data,2)
                 endfor
@@ -289,6 +296,9 @@ pro epics_logger_event, event
             state.logging_enabled = 0
             widget_control, state.widgets.start, sensitive=1
             widget_control, state.widgets.stop, sensitive=0
+            if (state.output_valid) then begin
+                flush, state.output_lun
+            endif
         end
 
         else: begin
@@ -336,6 +346,8 @@ pro epics_logger, input_file=input_file, output_file=output_file, time=time, $
         update_time: 0., $
         num_pvs: 0L, $
         pvs: strarr(max_pvs), $
+        element_count: lonarr(max_pvs), $
+        element_type: lonarr(max_pvs), $
         data_format: strarr(max_pvs), $
         description: strarr(max_pvs), $
         description_format: strarr(max_pvs), $
